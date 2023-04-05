@@ -41,7 +41,8 @@ jobs:
 
   instrumented_tests:
     machine:
-      image: android:2023.03.1
+      image: android:202102-01
+    resource_class: large
     steps:
       - checkout
       - run:
@@ -56,10 +57,8 @@ jobs:
           name: Launch emulator
           command: |
             emulator -avd test -delay-adb -verbose -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-            background: true
+          background: true
 
-      - restore_cache:
-          key:
       - run:
           name: Wait for emulator to start
           command: |
