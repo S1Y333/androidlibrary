@@ -92,13 +92,13 @@ jobs:
 workflows:
   build_and_deploy:
     jobs:
-      - build
+      - android-library:
       - instrumented_tests:
           requires:
-            - build
+            - android-library
       - unit_tests:
           requires:
-            - build
+            - android-library
       #After all the tests then deploy
       - deploy to github packages:
           requires:
