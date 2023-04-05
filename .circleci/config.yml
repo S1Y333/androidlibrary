@@ -4,7 +4,7 @@
 version: 2.1
 
 jobs:
-  build:
+  android-library:
 
     docker:
       # choose the right version, which include the maven, otherwise the mvn deploy will fail
@@ -18,42 +18,88 @@ jobs:
       - restore_cache:
           key: jars-{{ checksum "build.gradle" }}-{{ checksum "./build.gradle" }}
       - run:
-          name: chmod permissions
-          command: chmod +x ./gradlew
-      - run:
           name: Download Dependencies
           command: ./gradlew androidDependencies
-
 
       - save_cache:
           paths:
             - ~/.gradle
-          key: jars-{{ checksum "build.gradle" }}-{{ checksum "./build.gradle" }}
+          key: jars-{{ checksum "build.gradle" }}
 
       # Build
       - run: ./gradlew clean assemble
 
 
-      # run tests
+      # run unit tests
+  unit_tests:
+     docker:
+       - image: cimg/android:2023.02
+     steps:
+      - checkout
       - run:
-          name: run tests
+          name: run unit tests
           command: ./gradlew test
 
-      #- run:
-        #  name: Authenticate with GitHub Packages
-         # command: |
-          #  echo $GITHUB_TOKEN
-           # echo $GITHUB_USERNAME
+      - store_test_results:
+          path: androidlibrary_lib/build/reports
 
-      #run mvn
-     # - run:
-        #  name: run mvn
-        #  command: |
-          #  mvn clean deploy
+  instrumented_tests:
+    machine:
+      image: android:2023.03.1
+    steps:
+      - checkout
+      - run:
+          name: Create avd
+      - run:
+          name: Launch emulator
+      - run:
+          name: Generate cache key
+      - restore_cache:
+          key:
+      - run:
+          name: Wait for emulator to start
+          command: |
+            circle-android wait-for-boot
+      #disabling these animations, tests can be executed more quickly, debug the app more efficiently.
+      - run:
+          name: Disable emulator animations
+          command: |
+            adb shell settings put global window_animation_scale 0.0
+            adb shell settings put global transition_animation_scale 0.0
+            adb shell settings put global animator_duration_scale 0.0
+      - run:
+          name: UI tests
+          command: |
+            ./gradlew connectedAndroidTest
+
+  deploy to github packages:
+      docker:
+        - image: cimg/android:2023.02
+      steps:
+        - checkout
+        - run:
+            name: Authenticate with GitHub Packages
+            command: |
+              echo $GITHUB_USERNAME
+              echo $GITHUB_TOKEN
+        - run:
+            name: Deploy GitHub Packages
+            command: |
+              mvn deploy
 
       # Invoke jobs via workflows
       # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
-      #workflows:
-      #android-library-workflow:
-      #jobs:
-      # - android-library
+workflows:
+  build_and_deploy:
+    jobs:
+      - build
+      - instrumented_tests:
+          requires:
+            - build
+      - unit_tests:
+          requires:
+            - build
+      - deploy to github packages:
+          requires:
+            - instrumented_test
+            - unit_tests
