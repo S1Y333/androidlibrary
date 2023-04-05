@@ -4,15 +4,11 @@
 version: 2.1
 
 jobs:
-  android-library:
+  build:
 
     docker:
       # choose the right version, which include the maven, otherwise the mvn deploy will fail
       - image: cimg/android:2023.02
-
-
-    environment:
-      JVM_OPTS: -Xmx3200m
     steps:
       - checkout
       - restore_cache:
@@ -49,11 +45,19 @@ jobs:
     steps:
       - checkout
       - run:
+          #specifies the Android 29 system image with default settings for the x86 architecture.
+          #uses the Android SDK manager tool to download and install the system image specified in SYSTEM_IMAGES.
           name: Create avd
+          command: |  
+            SYSTEM_IMAGES="system-images;android-29;default;x86"
+            sdkmanager "$SYSTEM_IMAGES"
+            echo "no" | avdmanager --verbose create avd -n test -k "$SYSTEM_IMAGES"
       - run:
           name: Launch emulator
-      - run:
-          name: Generate cache key
+          command: |
+            emulator -avd test -delay-adb -verbose -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+            background: true
+
       - restore_cache:
           key:
       - run:
