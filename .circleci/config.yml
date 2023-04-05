@@ -106,5 +106,5 @@ workflows:
       #After all the tests then deploy
       - deploy to github packages:
           requires:
-            - instrumented_test
+            - instrumented_tests
             - unit_tests
