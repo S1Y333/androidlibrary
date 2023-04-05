@@ -99,6 +99,7 @@ workflows:
       - unit_tests:
           requires:
             - build
+      #After all the tests then deploy
       - deploy to github packages:
           requires:
             - instrumented_test
